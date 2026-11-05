@@ -4,6 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>D365 Web Tracking Test Page</title>
+  <style>
+    #capture-section { max-width: 720px; margin: 32px 0; padding: 24px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: Arial, sans-serif; color: #172b4d; }
+    #capture-section * { box-sizing: border-box; }
+    #capture-section h2 { margin-top: 0; }
+    #capture-section .capture-field { margin: 18px 0; }
+    #capture-section .capture-field > label { display: block; margin-bottom: 6px; font-weight: 600; }
+    #capture-section input[type="text"], #capture-section input[type="email"] { width: 100%; padding: 10px; border: 1px solid #64748b; border-radius: 4px; font: inherit; }
+    #capture-section fieldset { margin: 20px 0; padding: 16px; border: 1px solid #94a3b8; }
+    #capture-section legend { padding: 0 6px; font-weight: 600; }
+    #capture-section .capture-choice { display: inline-flex; gap: 8px; align-items: center; margin-right: 28px; padding: 8px 0; cursor: pointer; }
+    #capture-section input[type="checkbox"] { width: 18px; height: 18px; }
+    #capture-section button { padding: 12px 24px; border: 0; border-radius: 4px; background: #00418a; color: white; font: inherit; cursor: pointer; }
+    #capture-section button:disabled { opacity: .65; cursor: wait; }
+    #capture-section input:focus-visible, #capture-section button:focus-visible { outline: 3px solid #28767d; outline-offset: 3px; }
+    #capture-section .capture-help { color: #475569; line-height: 1.5; }
+    #capture-status { min-height: 1.5em; line-height: 1.5; }
+  </style>
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -21,6 +38,42 @@
   <h1>D365 Web Tracking Test Page</h1>
   <p>This page is used to test web tracking through Google Tag Manager (GTM).</p>
 
+  <section id="capture-section" aria-labelledby="capture-heading">
+    <h2 id="capture-heading">HTML Form - Form Capture</h2>
+    <p class="capture-help">Complete this form to submit your details. Fields marked with * are required.</p>
+    <form id="capture-form" method="post">
+      <div class="capture-field">
+        <label for="capture-first-name">First Name *</label>
+        <input id="capture-first-name" name="firstName" type="text" autocomplete="given-name" maxlength="50" required>
+      </div>
+      <div class="capture-field">
+        <label for="capture-last-name">Last Name *</label>
+        <input id="capture-last-name" name="lastName" type="text" autocomplete="family-name" maxlength="50" required>
+      </div>
+      <div class="capture-field">
+        <label for="capture-email">Email *</label>
+        <input id="capture-email" name="email" type="email" autocomplete="email" maxlength="100" required>
+      </div>
+      <div class="capture-field">
+        <label for="capture-job-title">Job Title</label>
+        <input id="capture-job-title" name="jobTitle" type="text" autocomplete="organization-title" maxlength="100">
+      </div>
+      <fieldset aria-describedby="capture-consent-help">
+        <legend>I agree to receive marketing emails *</legend>
+        <p id="capture-consent-help" class="capture-help">Select Yes or No. You can submit this form with either choice.</p>
+        <label class="capture-choice" for="capture-consent-yes">
+          <input id="capture-consent-yes" name="marketingEmailConsent" type="checkbox" value="yes"> Yes
+        </label>
+        <label class="capture-choice" for="capture-consent-no">
+          <input id="capture-consent-no" name="marketingEmailDecline" type="checkbox" value="no"> No
+        </label>
+      </fieldset>
+      <button id="capture-submit" type="submit" disabled>Submit</button>
+      <p id="capture-status" role="status" aria-live="polite">Preparing the form...</p>
+      <noscript><p>Enable JavaScript to submit this form.</p></noscript>
+    </form>
+  </section>
+
   <h2>Customer Insights - Journeys Form</h2>
   <div
     data-form-id="d0b50999-19d4-f111-84e8-70a8a59b6834"
@@ -28,5 +81,92 @@
     data-cached-form-url="https://assets1-usa.mkt.dynamics.com/5dd96bcb-1ac4-f011-8729-000d3a331115/digitalassets/forms/d0b50999-19d4-f111-84e8-70a8a59b6834"
   ></div>
   <script src="https://formui-usa1.mkt.dynamics.com/usa/FormLoader/FormLoader.bundle.js"></script>
+
+  <!-- Capture only the custom HTML form above. Keep the embedded form separate. -->
+  <script src="https://formui-usa1.mkt.dynamics.com/usa/FormCapture/FormCapture.bundle.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      const form = document.getElementById('capture-form');
+      const yes = document.getElementById('capture-consent-yes');
+      const no = document.getElementById('capture-consent-no');
+      const button = document.getElementById('capture-submit');
+      const status = document.getElementById('capture-status');
+      let ready = false;
+      let submitting = false;
+
+      const mappings = [
+        { FormFieldName: 'firstName', DataverseFieldName: 'firstname' },
+        { FormFieldName: 'lastName', DataverseFieldName: 'lastname' },
+        { FormFieldName: 'email', DataverseFieldName: 'emailaddress1' },
+        { FormFieldName: 'jobTitle', DataverseFieldName: 'jobtitle' },
+        {
+          // Yes is checked for opt-in. Selecting No leaves this checkbox unchecked.
+          FormFieldName: 'marketingEmailConsent',
+          DataverseFieldName: 'msdynmkt_purposeid;channels;optinwhenchecked',
+          DataverseFieldValue: 'd3c2f2c2-edd7-f111-84ea-70a8a59b62cf;Email;true',
+          LabelText: 'I agree to receive marketing emails',
+          ComplianceSettingsId: 'a0c1f2c2-edd7-f111-84ea-70a8a59b62cf'
+        }
+      ];
+      const captureConfig = {
+        FormId: 'd0b50999-19d4-f111-84e8-70a8a59b6834',
+        FormApiUrl: 'https://public-usa.mkt.dynamics.com/api/v1.0/orgs/5dd96bcb-1ac4-f011-8729-000d3a331115/landingpageforms'
+      };
+
+      function validateConsent() {
+        yes.setCustomValidity(yes.checked !== no.checked ? '' : 'Please select Yes or No.');
+      }
+      yes.addEventListener('change', function () {
+        if (yes.checked) no.checked = false;
+        validateConsent();
+      });
+      no.addEventListener('change', function () {
+        if (no.checked) yes.checked = false;
+        validateConsent();
+      });
+      validateConsent();
+
+      form.addEventListener('submit', async function (event) {
+        // Stay on this page until capture finishes. Never capture the embedded form.
+        event.preventDefault();
+        if (!ready || submitting) return;
+        validateConsent();
+        if (!form.reportValidity()) return;
+        submitting = true;
+        button.disabled = true;
+        button.textContent = 'Submitting...';
+        status.textContent = 'Submitting your details...';
+        try {
+          const serialized = window.d365mktformcapture.serializeForm(form, mappings);
+          const failed = serialized.FormFieldMappingResults.filter(function (result) {
+            return result.FormFieldMappingStatus !== 0;
+          });
+          if (failed.length) throw new Error('Form field mapping failed.');
+          await window.d365mktformcapture.submitForm(captureConfig, serialized.SerializedForm.build());
+          status.textContent = 'Thank you. Your form was submitted. Processing may take a few minutes.';
+        } catch (error) {
+          status.textContent = 'Your submission could not be confirmed. Please try again later.';
+        } finally {
+          submitting = false;
+          button.disabled = false;
+          button.textContent = 'Submit';
+        }
+      });
+
+      if (!window.d365mktformcapture) {
+        status.textContent = 'The form could not load. Please refresh the page or try again later.';
+        return;
+      }
+      window.d365mktformcapture.waitForElement('#capture-form').then(function (target) {
+        if (target !== form) throw new Error('Unexpected capture target.');
+        ready = true;
+        button.disabled = false;
+        status.textContent = '';
+      }).catch(function () {
+        status.textContent = 'The form could not load. Please refresh the page or try again later.';
+      });
+    })();
+  </script>
 </body>
 </html>
